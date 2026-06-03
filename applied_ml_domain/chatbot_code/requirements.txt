@@ -1,0 +1,11 @@
+flask==3.0.0
+flask-cors==4.0.0
+anthropic==0.28.0
+sentence-transformers==2.7.0
+faiss-cpu==1.8.0
+numpy==1.26.4
+requests==2.31.0
+
+# --- these two were MISSING from original requirements ---
+PyMuPDF==1.23.8
+langchain-text-splitters==0.2.4

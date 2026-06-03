@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPIDER ML RAG Platform</title>
+    <style>
+        body {
+            background-color: #0d1117;
+            color: #c9d1d9;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background-color: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 20px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+        }
+        h2 { border-bottom: 1px solid #30363d; padding-bottom: 10px; color: #58a6ff; }
+        .chat-box {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #30363d;
+            background-color: #0d1117;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .message { margin-bottom: 15px; line-height: 1.5; }
+        .user { color: #58a6ff; font-weight: bold; }
+        .bot { color: #7fe7a4; font-weight: bold; }
+        .input-area { display: flex; gap: 10px; }
+        input[type="text"] {
+            flex: 1;
+            background-color: #0d1117;
+            border: 1px solid #30363d;
+            color: #c9d1d9;
+            padding: 10px;
+            border-radius: 6px;
+        }
+        input[type="text"]:focus { outline: 1px solid #58a6ff; }
+        button {
+            background-color: #238636;
+            color: #white;
+            border: 1px solid rgba(240,246,252,0.1);
+            padding: 10px 20px;
+            border-radius: 6px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        button:hover { background-color: #2ea043; }
+        .sources {
+            font-size: 0.85em;
+            color: #8b949e;
+            margin-top: 5px;
+            padding-left: 15px;
+            border-left: 2px solid #30363d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Spider ML Research Assistant</h2>
+        <div class="chat-box" id="chatBox">
+            <div class="message"><span class="bot">System:</span> RAG Knowledge Base online. Ask me anything about the 7 indexed NLP papers.</div>
+        </div>
+        <div class="input-area">
+            <input type="text" id="queryInput" placeholder="Ask a research question..." onkeydown="if(event.key==='Enter') sendQuery()">
+            <button onclick="sendQuery()">Send</button>
+        </div>
+    </div>
+
+    <script>
+        async function sendQuery() {
+            const input = document.getElementById('queryInput');
+            const chatBox = document.getElementById('chatBox');
+            const question = input.value.trim();
+            if (!question) return;
+
+            // append user message
+            chatBox.innerHTML += `<div class="message"><span class="user">You:</span> ${question}</div>`;
+            input.value = '';
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            // append loading state
+            const loadingId = 'loading-' + Date.now();
+            chatBox.innerHTML += `<div class="message" id="${loadingId}"><span class="bot">Gemma:</span> Thinking...</div>`;
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            try {
+                const response = await fetch('/api/query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question: question })
+                });
+                const data = await response.json();
+                document.getElementById(loadingId).remove();
+
+                if (data.error) {
+                    chatBox.innerHTML += `<div class="message"><span class="bot">Error:</span> ${data.error}</div>`;
+                } else {
+                    let sourceHtml = '<div class="sources"><strong>Cited Sources:</strong><br>';
+                    data.sources.forEach(s => {
+                        sourceHtml += `- ${s.paper} (Match Score: ${s.score})<br>`;
+                    });
+                    sourceHtml += '</div>';
+
+                    chatBox.innerHTML += `
+                        <div class="message">
+                            <span class="bot">Gemma:</span> ${data.answer.replace(/\n/g, '<br>')}
+                            ${data.sources.length ? sourceHtml : ''}
+                        </div>
+                    `;
+                }
+            } catch (err) {
+                document.getElementById(loadingId).remove();
+                chatBox.innerHTML += `<div class="message"><span class="bot">Error:</span> Failed to connect to server.</div>`;
+            }
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+    </script>
+</body>
+</html>

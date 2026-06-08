@@ -141,11 +141,11 @@ def main():
             chunk_id+=1
             
         # get images
-        #img_chunks = extract_images_and_caption(filepath, name)
-        #for ic in img_chunks:
-        #    ic["chunk_id"] = chunk_id
-        #    all_chunks.append(ic)
-        #    chunk_id += 1
+        img_chunks = extract_images_and_caption(filepath, name)
+        for ic in img_chunks:
+            ic["chunk_id"] = chunk_id
+            all_chunks.append(ic)
+            chunk_id += 1
 
         logger.info("Processed %s successfully.", name)
 

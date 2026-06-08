@@ -1,14 +1,16 @@
-# Spider ML Induction Task 1 - Submission
+# Spider ML Induction: Task 1
 
-A complete machine learning suite encompassing foundational model evaluation, advanced local optimization, and custom hybrid information retrieval systems.
+This repository contains my complete submission for the Spider ML inductions. The workspace is split into three main deliverables: a baseline classifier, an autoencoder dimensionality experiment, and a fully local Multi-Query RAG web application.
 
-## 📁 Repository Structure
-* **base_task/**: Contains data science pipeline notebooks and prediction outputs.
-* **applied_ml_domain/chatbot_code/**: An air-gapped, fully local Hybrid RAG Research Assistant (`all-MiniLM-L6-v2` + `BM25Okapi` + `Ollama/Gemma`).
-* **bonus_task/**: High-level optimization code implementations and performance benchmarks.
+## Directory Layout
+* `/base_task/` - The Fashion-MNIST classification pipeline, saved weights, and evaluation metrics.
+* `/bonus_task/` - Dimensionality reduction experiments using an MLP Autoencoder to find the intrinsic dataset bottleneck.
+* `/applied_ml_domain/chatbot_code/` - A local, air-gapped Multi-Query RAG Research Assistant built with Flask, FAISS, and Ollama.
 
-## 🛠️ How to Boot the Local RAG Chatbot
-1. Ensure Ollama is running in the background with the Gemma model: `ollama run gemma4:e4b`
-2. Navigate to the codebase: `cd applied_ml_domain/chatbot_code`
+## Running the RAG Web App
+The chatbot runs entirely locally. Ensure you have Ollama installed and running in the background before booting the server.
+
+1. Start the local LLM: `ollama run gemma4:e4b`
+2. Navigate to the backend directory: `cd applied_ml_domain/chatbot_code`
 3. Launch the web controller: `python app.py`
-4. Access the platform in your browser at `http://localhost:5000`
+4. Access the UI at: `http://localhost:5000`

@@ -2,6 +2,7 @@
 import os
 import pickle
 import requests
+import logging
 import base64
 import numpy as np
 import fitz  
@@ -24,28 +25,37 @@ PAPERS = {
 PAPERS_DIR = "papers"
 DB_PATH = "embeddings/vector_db.pkl"
 IMAGE_DIR = "ui/images"
-SUPPORTED_IMG_EXTS = {"png","jpeg","jpg"}
-OLLAMA_URL="http://localhost:11434/api/generate"
+SUPPORTED_IMG_EXTS = {"png", "jpeg", "jpg"}
+OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/generate")
+OLLAMA_TIMEOUT = int(os.getenv("OLLAMA_TIMEOUT", "30"))
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # get file
 def download_paper(name,url):
-    filename = os.path.join(PAPERS_DIR,name.replace(" ","_")+".pdf")
-    if os.path.exists(filename): return filename
-    print(f"  Downloading {name}...")
-    res = requests.get(url, headers={"User-Agent": "Mozilla/5.0"},timeout=60)
-    if res.status_code == 200:
-        with open(filename, "wb") as f: f.write(res.content)
+    filename =os.path.join(PAPERS_DIR,name.replace(" ","_")+".pdf")
+    if os.path.exists(filename):
         return filename
-    return None
+    logger.info("Downloading %s...", name)
+    try:
+        res = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=60)
+        res.raise_for_status()
+        with open(filename, "wb") as f:
+            f.write(res.content)
+        return filename
+    except Exception:
+        logger.exception("Failed to download %s", name)
+        return None
 
 # look images
 def extract_images_and_caption(filepath, paper_name):
-    image_chunks = []
-    doc = fitz.open(filepath)
+    image_chunks=[]
+    doc= fitz.open(filepath)
     
     # loop pages
     for page_num in range(len(doc)):
-        page = doc[page_num]
+        page=doc[page_num]
         images=page.get_images(full=True)
         
         # loop images
@@ -64,20 +74,20 @@ def extract_images_and_caption(filepath, paper_name):
             img_path = os.path.join(IMAGE_DIR, img_filename)
             with open(img_path, "wb") as f:
                 f.write(image_bytes)
-                
-            print(f"  Captioning {img_filename} locally with gemma4:e4b...")
+
+            logger.info("Captioning %s locally with gemma4:e4b...", img_filename)
             b64_data = base64.b64encode(image_bytes).decode('utf-8')
             
             # ask
             try:
-                payload = {
+                payload={
                     "model": "gemma4:e4b",
                     "prompt": "Describe this figure from a machine learning paper in extreme technical detail. Explain the architecture, data flow, or equations shown. Start with 'Figure showing...'",
                     "images": [b64_data],
                     "stream": False
                 }
-                response = requests.post(OLLAMA_URL, json=payload, timeout=None)
-                caption = response.json().get("response", "").strip()
+                response=requests.post(OLLAMA_URL, json=payload, timeout=OLLAMA_TIMEOUT)
+                caption=response.json().get("response", "").strip()
                 
                 # save caption
                 if caption:
@@ -88,8 +98,8 @@ def extract_images_and_caption(filepath, paper_name):
                         "is_image": True
                     })
             # error block
-            except Exception as e:
-                print(f"  Ollama local captioning failed for {img_filename}: {e}")
+            except Exception:
+                logger.exception("Ollama local captioning failed for %s", img_filename)
                 
     # shut file
     doc.close()
@@ -115,20 +125,20 @@ def main():
     os.makedirs(IMAGE_DIR, exist_ok=True)
 
     # text chopper
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1200, chunk_overlap=200)
-    all_chunks = []
-    chunk_id = 0
+    text_splitter=RecursiveCharacterTextSplitter(chunk_size=1200, chunk_overlap=200)
+    all_chunks=[]
+    chunk_id=0
 
     # process loop
     for name, url in PAPERS.items():
-        filepath = download_paper(name, url)
+        filepath=download_paper(name, url)
         if not filepath: continue
 
         # get text
-        raw_text = extract_text_smart(filepath)
+        raw_text=extract_text_smart(filepath)
         for text_chunk in text_splitter.split_text(raw_text):
             all_chunks.append({"chunk_id": chunk_id, "text": text_chunk, "paper": name, "is_image": False})
-            chunk_id += 1
+            chunk_id+=1
             
         # get images
         #img_chunks = extract_images_and_caption(filepath, name)
@@ -137,24 +147,38 @@ def main():
         #    all_chunks.append(ic)
         #    chunk_id += 1
 
-        print(f"Processed {name} successfully.")
+        logger.info("Processed %s successfully.", name)
 
     # load model
-    print("\nEmbedding all local chunks with all-MiniLM-L6-v2...")
-    model = SentenceTransformer("all-MiniLM-L6-v2")
-    embeddings = model.encode([c["text"] for c in all_chunks], show_progress_bar=True)
-    embeddings = np.array(embeddings).astype("float32")
-    faiss.normalize_L2(embeddings)
+    logger.info("Embedding all local chunks with all-MiniLM-L6-v2...")
+    model=SentenceTransformer("all-MiniLM-L6-v2")
 
-    # make index
-    index = faiss.IndexFlatIP(embeddings.shape[1])
-    index.add(embeddings)
+    texts=[c["text"] for c in all_chunks]
+    if not texts:
+        logger.warning("No text chunks found; exiting.")
+        return
+
+    batch_size = 64
+    index = None
+    for i in range(0, len(texts), batch_size):
+        batch_texts = texts[i:i+batch_size]
+        try:
+            emb = model.encode(batch_texts, show_progress_bar=False)
+        except Exception:
+            logger.exception("Embedding failed on batch starting at %d", i)
+            raise
+        emb = np.array(emb).astype("float32")
+        faiss.normalize_L2(emb)
+        if index is None:
+            index = faiss.IndexFlatIP(emb.shape[1])
+        index.add(emb)
 
     # save math
-    with open(DB_PATH, "wb") as f:
+    db_path = os.path.join(os.path.dirname(__file__), DB_PATH)
+    with open(db_path, "wb") as f:
         pickle.dump({"faiss_index_bytes": faiss.serialize_index(index), "metadata": all_chunks}, f)
 
-    print(f"\nSuccess. {index.ntotal} local hybrid vectors stored in {DB_PATH}")
+    logger.info("Success. %d local hybrid vectors stored in %s", index.ntotal, db_path)
 
 # run execution
 if __name__ == "__main__":

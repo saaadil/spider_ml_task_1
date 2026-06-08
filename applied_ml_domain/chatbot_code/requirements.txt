@@ -5,7 +5,6 @@ sentence-transformers==2.7.0
 faiss-cpu==1.8.0
 numpy==1.26.4
 requests==2.31.0
-
-# --- these two were MISSING from original requirements ---
 PyMuPDF==1.23.8
 langchain-text-splitters==0.2.4
+rank_bm25==0.2.2

@@ -1,0 +1,104 @@
+/* make the whole page dark and center the chat box */
+body {
+    background-color: #0d1117;
+    color: #c9d1d9;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* the main wrapper box styling */
+.container {
+    width: 100%;
+    max-width: 800px;
+    background-color: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: 20px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+/* top title */
+h2 { 
+    border-bottom: 1px solid #30363d; 
+    padding-bottom: 10px; 
+    color: #58a6ff; 
+}
+
+/* the box that holds the chat history */
+.chat-box {
+    height: 400px;
+    overflow-y: auto;
+    border: 1px solid #30363d;
+    background-color: #0d1117;
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+/* spacing for each message line */
+.message {
+    margin-bottom: 15px; 
+    line-height: 1.5; 
+}
+
+/* blue color for user name */
+.user {
+    color: #58a6ff;
+    font-weight: bold; 
+}
+
+/* green color for bot name */
+.bot {
+    color: #7fe7a4; 
+    font-weight: bold; 
+}
+
+/* put the text box and button side by side */
+.input-area {
+    display: flex; 
+    gap: 10px; 
+}
+
+/* how the text input looks */
+input[type="text"] {
+    flex: 1;
+    background-color: #0d1117;
+    border: 1px solid #30363d;
+    color: #c9d1d9;
+    padding: 10px;
+    border-radius: 6px;
+}
+
+/* blue outline when clicking inside the text box */
+input[type="text"]:focus { 
+    outline: 1px solid #58a6ff; 
+}
+
+/* green send button styling */
+button {
+    background-color: #238636;
+    color: white;
+    border: 1px solid rgba(240, 246, 252, 0.1);
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+/* make button slightly lighter green when hovering */
+button:hover { 
+    background-color: #2ea043; 
+}
+
+/* tiny grey text for the cited papers at the bottom of a response */
+.sources {
+    font-size: 0.85em;
+    color: #8b949e;
+    margin-top: 5px;
+    padding-left: 15px;
+    border-left: 2px solid #30363d;
+}
